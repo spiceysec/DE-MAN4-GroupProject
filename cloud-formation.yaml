@@ -1,0 +1,85 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Template to deploy a lambda which is triggered by an S3 event.
+Resources:
+  LambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+              - lambda.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Path: "/"
+      PermissionsBoundary: !Sub arn:aws:iam::${AWS::AccountId}:policy/ScopePermissions
+      Policies:
+      - PolicyName: LambdaLogsPolicy
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource: '*'
+
+  LambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt LambdaFunctionRole.Arn
+      Code:
+        S3Bucket: group2-test-dont-delete-bruv
+        S3Key: deman4teststackgroup2-LambdaFunction-jiRj5N6AEQ6U-813c3e56-b2fa-4d3b-a51b-87aebeb77056.zip
+
+  LambdaFunctionRedshift:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: python3.9
+      Handler: index.handler
+      Role: !GetAtt LambdaFunctionRole.Arn
+      Code:
+        S3Bucket: group2-test-dont-delete-bruv
+        S3Key: deman4teststackgroup2-LambdaFunction-jiRj5N6AEQ6U-bc70cadb-01b1-42c5-ad95-7e83d061903e.zip
+
+  S3Bucket:
+    Type: 'AWS::S3::Bucket'
+    Properties:
+      BucketName: deman4group2test2
+      NotificationConfiguration:
+        LambdaConfigurations:
+          - Event: s3:ObjectCreated:*
+            Function: !GetAtt LambdaFunction.Arn
+
+  S3BucketPermission:
+    Type: AWS::Lambda::Permission
+    Properties: 
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref LambdaFunction
+      Principal: s3.amazonaws.com
+      SourceArn: !GetAtt S3Bucket.Arn
+
+  BucketPolicy:
+    Type: 'AWS::S3::BucketPolicy'
+    Properties:
+      PolicyDocument:
+        Id: deman4-group2-policy
+        Version: 2012-10-17
+        Statement:
+            Effect: Allow
+            Principal: '*'
+            Action: 
+              - s3:GetBucketLocation 
+              - s3:ListBucket
+              - s3:GetBucketPolicy
+              - s3:GetObject
+            Resource:
+              - 'arn:aws:s3:::deman4group2test2'
+              - 'arn:aws:s3:::deman4group2test2/*'
+      Bucket: !Ref S3Bucket
